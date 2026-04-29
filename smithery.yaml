@@ -1,0 +1,41 @@
+name: shatale
+title: "Shatale — AI Agent Payments (Sandbox)"
+description: |
+  Give your AI agents the ability to spend money within delegated budgets and policy controls.
+  Create agents, issue virtual cards, set spending policies, and simulate transactions — all from your IDE.
+
+  Features:
+  - Guest mode (no signup): demo scenarios, MCC codes, code snippets
+  - Sandbox mode (free API key): create agents, simulate payments, test policies
+  - Policy engine: spend limits, MCC blocking, balance checks
+  - Works with Claude Desktop, Cursor, Windsurf, Claude Code
+
+  Sandbox only — no real money, no card data exposed.
+
+icon: "https://shatale.com/favicon.svg"
+sourceUrl: "https://github.com/solskiysb/shatale-mcp-server"
+homepage: "https://shatale.com/mcp"
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      SHATALE_API_KEY:
+        type: string
+        description: "Sandbox API key (sh_test_*). Get one free at shatale.com/signup. Optional — guest mode works without it."
+    required: []
+  commandFunction: |
+    (config) => ({
+      command: "npx",
+      args: ["@shatale/mcp-server"],
+      env: config.SHATALE_API_KEY ? { SHATALE_API_KEY: config.SHATALE_API_KEY } : {}
+    })
+
+tags:
+  - payments
+  - fintech
+  - ai-agents
+  - sandbox
+  - virtual-cards
+  - policy-engine
