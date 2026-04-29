@@ -21,7 +21,7 @@ AI-native payment infrastructure. Give your AI agents the ability to spend money
 ## Quick Start (5 minutes)
 
 ### 1. Create an Account
-Sign up at https://shatale.eu/signup — free sandbox access, no credit card required.
+Sign up at https://admin.shatale.com/register — free sandbox access, no credit card required.
 
 ### 2. Get Your API Key
 After signup, your sandbox API key (\`sh_test_...\`) is on the dashboard. Copy it.
@@ -45,8 +45,8 @@ Ask your AI assistant:
 - **Authorization**: Real-time approve/decline decision based on policy
 
 ## Links
-- Documentation: https://docs.shatale.eu
-- API Reference: https://docs.shatale.eu/api
+- Documentation: https://shatale.com/mcp
+- API Reference: https://shatale.com/mcp
 - GitHub: https://github.com/shatale/mcp-server`,
         },
       ],

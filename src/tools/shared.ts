@@ -54,7 +54,7 @@ export function requireApiKey(): { content: [{ type: "text"; text: string }] } {
           "Shatale API key is required for this tool.",
           "",
           "To get started:",
-          "1. Sign up at https://shatale.eu/signup?ref=mcp",
+          "1. Sign up at https://admin.shatale.com/register?ref=mcp",
           "2. Get your sandbox API key from the dashboard",
           "3. Set SHATALE_API_KEY in your environment",
           "4. Restart the MCP server",

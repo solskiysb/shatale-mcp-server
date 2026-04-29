@@ -1,6 +1,6 @@
 # Shatale MCP Server
 
-MCP server for [Shatale](https://shatale.eu) — AI-native payment infrastructure. Give your AI agents the ability to spend money within delegated budgets and policy controls.
+MCP server for [Shatale](https://shatale.com) — AI-native payment infrastructure. Give your AI agents the ability to spend money within delegated budgets and policy controls.
 
 **Sandbox only.** This server connects to the Shatale sandbox environment for testing and development.
 
@@ -16,7 +16,7 @@ The server starts in **guest mode** with 4 demo tools. No API key needed to expl
 
 ### 2. Get full access
 
-Sign up at [shatale.eu/signup](https://shatale.eu/signup?ref=mcp) (free, no credit card) and set your sandbox key:
+Sign up at [admin.shatale.com/register](https://admin.shatale.com/register?ref=mcp) (free, no credit card) and set your sandbox key:
 
 ```bash
 export SHATALE_API_KEY=sh_test_your_key_here
@@ -121,9 +121,9 @@ The server provides built-in documentation:
 
 ## Links
 
-- [Shatale Website](https://shatale.eu)
-- [Documentation](https://docs.shatale.eu)
-- [Sign Up](https://shatale.eu/signup?ref=mcp)
+- [Shatale Website](https://shatale.com)
+- [Documentation](https://docs.shatale.com)
+- [Sign Up](https://admin.shatale.com/register?ref=mcp)
 - [GitHub](https://github.com/solskiysb/shatale-mcp-server)
 
 ## License

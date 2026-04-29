@@ -10,7 +10,7 @@
 
 If you discover a security vulnerability, please report it responsibly:
 
-- **Email:** security@shatale.eu
+- **Email:** security@shatale.com
 - **Do not** open a public GitHub issue for security vulnerabilities
 - We will acknowledge receipt within 48 hours
 - We will provide a detailed response within 7 days

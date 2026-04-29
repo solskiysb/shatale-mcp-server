@@ -169,19 +169,19 @@ console.log("Rule traces:", result.rule_traces);`;
 
 function generateCurlSnippet(vertical: string): string {
   return `# 1. Create a ${vertical} agent
-curl -X POST https://api.sandbox.shatale.eu/v1/agents \\
+curl -X POST https://sandbox.api.shatale.com/v1/agents \\
   -H "Authorization: Bearer $SHATALE_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "my-${vertical}-agent", "metadata": {"vertical": "${vertical}"}}'
 
 # 2. Issue a virtual card
-curl -X POST https://api.sandbox.shatale.eu/v1/cards \\
+curl -X POST https://sandbox.api.shatale.com/v1/cards \\
   -H "Authorization: Bearer $SHATALE_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"agent_id": "AGENT_ID", "currency": "EUR", "spend_limit_cents": 100000}'
 
 # 3. Simulate a payment (sandbox only)
-curl -X POST https://api.sandbox.shatale.eu/v1/sandbox/simulate \\
+curl -X POST https://sandbox.api.shatale.com/v1/sandbox/simulate \\
   -H "Authorization: Bearer $SHATALE_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"card_id": "CARD_ID", "amount_cents": 4999, "currency": "EUR", "merchant_name": "Test Merchant", "mcc": "5999"}'`;
@@ -294,8 +294,8 @@ export function registerGuestTools(server: McpServer): void {
         snippet,
         "",
         "---",
-        "Docs: https://docs.shatale.eu",
-        "Dashboard: https://sandbox.shatale.eu/dashboard",
+        "Docs: https://shatale.com/mcp",
+        "Dashboard: https://admin.shatale.com/dashboard",
       ].join("\n");
 
       return { content: [{ type: "text", text }] };
@@ -313,11 +313,11 @@ export function registerGuestTools(server: McpServer): void {
         "Getting Started with Shatale MCP Server",
         "========================================",
         "",
-        "1. Sign up at https://shatale.eu/signup?ref=mcp",
+        "1. Sign up at https://admin.shatale.com/register?ref=mcp",
         "   Create a free account to access the sandbox environment.",
         "",
         "2. Get your sandbox API key",
-        "   Go to https://sandbox.shatale.eu/dashboard/api-keys",
+        "   Go to https://admin.shatale.com/dashboard",
         "   Create a new key \u2014 it will start with sh_test_ or sh_sandbox_.",
         "",
         "3. Set the SHATALE_API_KEY environment variable",
@@ -328,10 +328,10 @@ export function registerGuestTools(server: McpServer): void {
         "   The sandbox tools will become available automatically.",
         "",
         "Useful links:",
-        "  Docs:      https://docs.shatale.eu",
-        "  API Ref:   https://docs.shatale.eu/api",
+        "  Docs:      https://shatale.com/mcp",
+        "  API Ref:   https://shatale.com/mcp",
         "  GitHub:    https://github.com/shatale/mcp-server",
-        "  Dashboard: https://sandbox.shatale.eu/dashboard",
+        "  Dashboard: https://admin.shatale.com/dashboard",
         "",
         "While you wait, try the guest tools:",
         "  - shatale_demo_scenarios    \u2014 see how the policy engine works",

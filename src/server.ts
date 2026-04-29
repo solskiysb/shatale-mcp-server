@@ -18,7 +18,7 @@ export function createServer(apiKey?: string): McpServer {
 
   // If API key provided, register sandbox tools
   if (apiKey) {
-    const baseUrl = "https://sandbox.shatale.eu/v1";
+    const baseUrl = "https://sandbox.api.shatale.com";
     const client = new ShataleClient({ baseUrl, apiKey });
     registerSandboxTools(server, client);
   }

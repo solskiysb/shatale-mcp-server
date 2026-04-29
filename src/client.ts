@@ -114,7 +114,7 @@ export class ShataleClient {
     }
 
     this.apiKey = options.apiKey;
-    this.baseUrl = options.baseUrl ?? "https://api.sandbox.shatale.eu/v1";
+    this.baseUrl = options.baseUrl ?? "https://sandbox.api.shatale.com/v1";
   }
 
   // ─── HTTP helpers ────────────────────────────────────────────────────────

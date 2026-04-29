@@ -15,7 +15,7 @@ if (apiKey) {
       "Production keys are not supported for security reasons.",
     );
     console.error(
-      "Get a sandbox key at: https://shatale.eu/signup?ref=mcp",
+      "Get a sandbox key at: https://admin.shatale.com/register?ref=mcp",
     );
     process.exit(1);
   }
@@ -24,7 +24,7 @@ if (apiKey) {
       "Error: Invalid API key format. Expected sh_test_* prefix.",
     );
     console.error(
-      "Get a sandbox key at: https://shatale.eu/signup?ref=mcp",
+      "Get a sandbox key at: https://admin.shatale.com/register?ref=mcp",
     );
     process.exit(1);
   }
@@ -34,7 +34,7 @@ if (apiKey) {
     "Shatale MCP Server started (guest mode — limited tools)",
   );
   console.error(
-    "Set SHATALE_API_KEY for full access: https://shatale.eu/signup?ref=mcp",
+    "Set SHATALE_API_KEY for full access: https://admin.shatale.com/register?ref=mcp",
   );
 }
 
