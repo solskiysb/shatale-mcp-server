@@ -9,7 +9,7 @@ MCP server for [Shatale](https://shatale.eu) — AI-native payment infrastructur
 ### 1. Install and run
 
 ```bash
-npx @shatale/mcp-server
+npx shatale-mcp-server
 ```
 
 The server starts in **guest mode** with 4 demo tools. No API key needed to explore.
@@ -20,7 +20,7 @@ Sign up at [shatale.eu/signup](https://shatale.eu/signup?ref=mcp) (free, no cred
 
 ```bash
 export SHATALE_API_KEY=sh_test_your_key_here
-npx @shatale/mcp-server
+npx shatale-mcp-server
 ```
 
 Now you have **9 tools** — create agents, simulate payments, test policies.
@@ -36,7 +36,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "shatale": {
       "command": "npx",
-      "args": ["@shatale/mcp-server"],
+      "args": ["shatale-mcp-server"],
       "env": {
         "SHATALE_API_KEY": "sh_test_your_key_here"
       }
@@ -48,7 +48,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ### Claude Code
 
 ```bash
-claude mcp add shatale -- npx @shatale/mcp-server
+claude mcp add shatale -- npx shatale-mcp-server
 ```
 
 ### Cursor
@@ -60,7 +60,7 @@ Add to `.cursor/mcp.json`:
   "mcpServers": {
     "shatale": {
       "command": "npx",
-      "args": ["@shatale/mcp-server"],
+      "args": ["shatale-mcp-server"],
       "env": {
         "SHATALE_API_KEY": "sh_test_your_key_here"
       }
