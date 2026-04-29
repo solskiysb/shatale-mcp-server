@@ -124,7 +124,7 @@ The server provides built-in documentation:
 - [Shatale Website](https://shatale.eu)
 - [Documentation](https://docs.shatale.eu)
 - [Sign Up](https://shatale.eu/signup?ref=mcp)
-- [GitHub](https://github.com/shatale/mcp-server)
+- [GitHub](https://github.com/solskiysb/shatale-mcp-server)
 
 ## License
 

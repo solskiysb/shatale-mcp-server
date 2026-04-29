@@ -1,6 +1,6 @@
 {
   "name": "shatale-mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for Shatale — delegated AI agent payments sandbox",
   "type": "module",
   "main": "dist/index.js",
@@ -28,7 +28,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shatale/mcp-server"
+    "url": "https://github.com/solskiysb/shatale-mcp-server"
   },
   "engines": {
     "node": ">=20"
