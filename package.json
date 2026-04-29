@@ -1,0 +1,44 @@
+{
+  "name": "@shatale/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Shatale — delegated AI agent payments sandbox",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "shatale-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "payments",
+    "fintech",
+    "ai-agents",
+    "sandbox",
+    "virtual-cards",
+    "policy-engine",
+    "shatale"
+  ],
+  "author": "Shatale <dev@shatale.eu>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shatale/mcp-server"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}
