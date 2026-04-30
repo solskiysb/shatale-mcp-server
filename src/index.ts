@@ -1,43 +1,84 @@
-#!/usr/bin/env node
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js'
+import { ShataleClient } from './client.js'
+import { createGuestTools } from './tools/guest.js'
+import { createPurchaseTools } from './tools/purchase.js'
+import { createCredentialTools } from './tools/credentials.js'
+import { createSandboxTools } from './tools/sandbox.js'
+import { createOnboardingTools } from './tools/onboarding.js'
+import { createCommonTools } from './tools/common.js'
+import type { ToolDefinition, ToolHandler } from './types.js'
+import { textResult } from './types.js'
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer } from "./server.js";
+const apiKey = process.env.SHATALE_API_KEY ?? ''
+const apiBase = process.env.SHATALE_API_URL ?? 'https://api.shatale.com'
+const isGuest = !apiKey
+const isSandbox = apiKey.startsWith('sh_test_')
 
-const apiKey = process.env.SHATALE_API_KEY;
+const client = new ShataleClient(apiBase, apiKey)
 
-// Validate key format if provided
-if (apiKey) {
-  if (apiKey.startsWith("sh_live_")) {
-    console.error(
-      "Error: Shatale MCP server works only with sandbox keys (sh_test_*).",
-    );
-    console.error(
-      "Production keys are not supported for security reasons.",
-    );
-    console.error(
-      "Get a sandbox key at: https://admin.shatale.com/register?ref=mcp",
-    );
-    process.exit(1);
-  }
-  if (!apiKey.startsWith("sh_test_")) {
-    console.error(
-      "Error: Invalid API key format. Expected sh_test_* prefix.",
-    );
-    console.error(
-      "Get a sandbox key at: https://admin.shatale.com/register?ref=mcp",
-    );
-    process.exit(1);
-  }
-  console.error("Shatale MCP Server started (sandbox mode)");
-} else {
-  console.error(
-    "Shatale MCP Server started (guest mode — limited tools)",
-  );
-  console.error(
-    "Set SHATALE_API_KEY for full access: https://admin.shatale.com/register?ref=mcp",
-  );
+// Collect all tool definitions and handlers
+const allTools: ToolDefinition[] = []
+const allHandlers: Record<string, ToolHandler> = {}
+
+function registerModule(mod: { tools: ToolDefinition[]; handlers: Record<string, ToolHandler> }) {
+  allTools.push(...mod.tools)
+  Object.assign(allHandlers, mod.handlers)
 }
 
-const server = createServer(apiKey);
-const transport = new StdioServerTransport();
-await server.connect(transport);
+// Always register guest + common tools
+registerModule(createGuestTools())
+registerModule(createCommonTools(client))
+
+// Register authenticated tools if API key provided
+if (!isGuest) {
+  registerModule(createPurchaseTools(client))
+  registerModule(createCredentialTools(client))
+  registerModule(createOnboardingTools(client))
+  if (isSandbox) {
+    registerModule(createSandboxTools(client))
+  }
+}
+
+// Create server
+const server = new Server(
+  { name: 'shatale-mcp', version: '0.1.0' },
+  { capabilities: { tools: {} } },
+)
+
+// Register list_tools handler
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return { tools: allTools }
+})
+
+// Register call_tool handler
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params
+  const handler = allHandlers[name]
+
+  if (!handler) {
+    return textResult(`Unknown tool: ${name}`, true)
+  }
+
+  return handler(args ?? {})
+})
+
+// Start server
+async function main() {
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+
+  // Log mode to stderr so it does not interfere with stdio transport
+  const mode = isGuest ? 'guest' : isSandbox ? 'sandbox' : 'production'
+  const toolCount = allTools.length
+  process.stderr.write(`Shatale MCP server started (${mode} mode, ${toolCount} tools)\n`)
+}
+
+main().catch((err) => {
+  process.stderr.write(`Fatal: ${err}\n`)
+  process.exit(1)
+})

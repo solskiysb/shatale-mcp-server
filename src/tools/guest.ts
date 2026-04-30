@@ -1,345 +1,221 @@
-/**
- * Guest tools — work without an API key.
- * These provide documentation, demo scenarios, and code snippets.
- */
+import type { ToolModule } from '../types.js'
+import { textResult } from '../types.js'
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { formatCurrency, formatRuleTraces } from "./shared.js";
+function handleExplainShatale() {
+  return textResult(`# What is Shatale?
 
-// ─── MCC Code Database ──────────────────────────────────────────────────────
+Shatale enables AI agents to make real purchases on the internet — safely and with full control.
 
-interface MccCode {
-  code: string;
-  description: string;
-  category: string;
+## How it works
+
+1. **Publisher** integrates Shatale SDK into their AI agent platform
+2. **End user** sets spending policies (budgets, allowed merchants, categories)
+3. **AI agent** requests a purchase via the Shatale API
+4. **Shatale** validates the request against policies, handles payment, and returns confirmation
+5. **End user** gets notified and can review/approve purchases
+
+## Key concepts
+
+- **Purchase request**: Agent asks to buy something — Shatale checks policies and executes
+- **Temporary credentials**: For merchants that need login, Shatale issues short-lived card credentials
+- **Spending policies**: Per-user rules — budget limits, allowed MCC codes, merchant allowlists
+- **Sandbox mode**: Test everything with \`sh_test_\` API keys before going live
+
+## Modes
+
+- **Guest mode** (no API key): Explore capabilities, simulate flows, generate policy templates
+- **Sandbox mode** (\`sh_test_*\` key): Full API access with test data, no real money
+- **Production mode** (\`sh_live_*\` key): Real purchases, real money
+
+## Getting started
+
+Set the \`SHATALE_API_KEY\` environment variable and restart the MCP server.
+Get your API key at https://dashboard.shatale.com`)
 }
 
-const MCC_CODES: MccCode[] = [
-  // Shopping
-  { code: "5411", description: "Grocery stores & supermarkets", category: "shopping" },
-  { code: "5311", description: "Department stores", category: "shopping" },
-  { code: "5691", description: "Clothing stores", category: "shopping" },
-  { code: "5944", description: "Jewelry & watch stores", category: "shopping" },
-  { code: "5945", description: "Toy & game stores", category: "shopping" },
-  { code: "5999", description: "Miscellaneous retail", category: "shopping" },
-  // Travel
-  { code: "4511", description: "Airlines & air carriers", category: "travel" },
-  { code: "7011", description: "Hotels & lodging", category: "travel" },
-  { code: "4121", description: "Taxis & rideshare", category: "travel" },
-  { code: "7512", description: "Car rental", category: "travel" },
-  { code: "4722", description: "Travel agencies & tour operators", category: "travel" },
-  // Food
-  { code: "5812", description: "Restaurants", category: "food" },
-  { code: "5814", description: "Fast food", category: "food" },
-  { code: "5813", description: "Bars & drinking places", category: "food" },
-  // Services
-  { code: "7230", description: "Beauty & barber shops", category: "services" },
-  { code: "7298", description: "Health spas", category: "services" },
-  { code: "8011", description: "Doctors & physicians", category: "services" },
-  { code: "8021", description: "Dentists & orthodontists", category: "services" },
-  { code: "8099", description: "Medical services (other)", category: "services" },
-  // Restricted
-  { code: "7995", description: "Gambling & betting", category: "restricted" },
-  { code: "5921", description: "Package liquor stores", category: "restricted" },
-  { code: "5993", description: "Tobacco & cigars", category: "restricted" },
-  { code: "6211", description: "Securities & brokers", category: "restricted" },
-];
+function handleSimulatePurchase(args: Record<string, unknown>) {
+  const merchant = String(args.merchant ?? 'example.com')
+  const amount = Number(args.amount ?? 0)
+  const currency = String(args.currency ?? 'USD')
+  const description = String(args.description ?? 'a purchase')
 
-// ─── Demo Scenarios ─────────────────────────────────────────────────────────
+  return textResult(`# Simulated Purchase Flow
 
-interface DemoScenario {
-  title: string;
-  decision: "APPROVED" | "DECLINED";
-  amount_cents: number;
-  currency: string;
-  merchant: string;
-  mcc: string;
-  reason: string;
-  rule_traces: Array<{ rule: string; passed: boolean; detail?: string }>;
+## Request
+- **Merchant**: ${merchant}
+- **Amount**: ${amount} ${currency}
+- **Description**: ${description}
+
+## Step-by-step flow
+
+### 1. Request validation
+The agent calls \`request_purchase\` with the details above.
+Shatale validates:
+- API key is valid and active
+- Publisher account is in good standing
+- Request fields are complete
+
+### 2. Policy check
+Shatale checks the end user's spending policy:
+- Is ${merchant} in the allowed merchant list?
+- Does the amount (${amount} ${currency}) fit within the remaining budget?
+- Is the merchant's MCC code in the allowed categories?
+- Are there any time-of-day or frequency restrictions?
+
+### 3. Payment execution
+If all checks pass:
+- Shatale reserves the amount from the user's wallet
+- Generates a virtual card or uses card-on-file for the merchant
+- Completes the payment with the merchant
+
+### 4. Confirmation
+- Purchase ID is returned to the agent
+- User receives a notification (push/email based on preferences)
+- Transaction appears in the user's dashboard
+
+### 5. Post-purchase
+- Agent can check status via \`get_purchase_status\`
+- User can dispute within 24 hours
+- Refunds are handled automatically if the merchant initiates one
+
+## What could block this purchase?
+- Insufficient budget remaining
+- Merchant not in allowlist
+- MCC code blocked by policy
+- Daily/weekly transaction limit reached
+- Account requires re-verification`)
 }
 
-const DEMO_SCENARIOS: DemoScenario[] = [
-  {
-    title: "Normal clothing purchase",
-    decision: "APPROVED",
-    amount_cents: 15000,
-    currency: "EUR",
-    merchant: "Nike Store",
-    mcc: "5691",
-    reason: "All policy rules pass",
-    rule_traces: [
-      { rule: "spend_limit", passed: true, detail: "150.00 <= 500.00 per-transaction limit" },
-      { rule: "mcc_allowlist", passed: true, detail: "MCC 5691 (Clothing) is allowed" },
-      { rule: "balance_check", passed: true, detail: "Balance 850.00 >= 150.00" },
-    ],
-  },
-  {
-    title: "Over per-transaction limit",
-    decision: "DECLINED",
-    amount_cents: 80000,
-    currency: "EUR",
-    merchant: "Luxury Watch Boutique",
-    mcc: "5944",
-    reason: "Exceeds per-transaction spend limit",
-    rule_traces: [
-      { rule: "spend_limit", passed: false, detail: "800.00 > 500.00 per-transaction limit" },
-      { rule: "mcc_allowlist", passed: true, detail: "MCC 5944 (Jewelry) is allowed" },
-      { rule: "balance_check", passed: true, detail: "Balance 850.00 >= 800.00" },
-    ],
-  },
-  {
-    title: "Blocked merchant category",
-    decision: "DECLINED",
-    amount_cents: 5000,
-    currency: "EUR",
-    merchant: "Online Casino",
-    mcc: "7995",
-    reason: "MCC blocked by policy",
-    rule_traces: [
-      { rule: "spend_limit", passed: true, detail: "50.00 <= 500.00 per-transaction limit" },
-      { rule: "mcc_allowlist", passed: false, detail: "MCC 7995 (Gambling) is blocked" },
-    ],
-  },
-  {
-    title: "Insufficient balance",
-    decision: "DECLINED",
-    amount_cents: 20000,
-    currency: "EUR",
-    merchant: "Le Petit Bistro",
-    mcc: "5812",
-    reason: "Balance below minimum threshold",
-    rule_traces: [
-      { rule: "spend_limit", passed: true, detail: "200.00 <= 500.00 per-transaction limit" },
-      { rule: "mcc_allowlist", passed: true, detail: "MCC 5812 (Restaurants) is allowed" },
-      { rule: "balance_check", passed: false, detail: "Balance 80.00 < 100.00 minimum threshold" },
-    ],
-  },
-  {
-    title: "Travel purchase within limits",
-    decision: "APPROVED",
-    amount_cents: 35000,
-    currency: "EUR",
-    merchant: "British Airways",
-    mcc: "4511",
-    reason: "Travel MCC allowed, within all limits",
-    rule_traces: [
-      { rule: "spend_limit", passed: true, detail: "350.00 <= 500.00 per-transaction limit" },
-      { rule: "mcc_allowlist", passed: true, detail: "MCC 4511 (Airlines) is allowed" },
-      { rule: "balance_check", passed: true, detail: "Balance 1200.00 >= 350.00" },
-    ],
-  },
-];
-
-// ─── Code Snippets ──────────────────────────────────────────────────────────
-
-function generateTypescriptSnippet(vertical: string): string {
-  return `import { ShataleClient } from "@shatale/sdk";
-
-const client = new ShataleClient({
-  apiKey: process.env.SHATALE_API_KEY!,
-});
-
-// 1. Create a ${vertical} agent
-const agent = await client.createAgent({
-  name: "my-${vertical}-agent",
-  metadata: { vertical: "${vertical}" },
-});
-console.log("Agent created:", agent.id);
-
-// 2. Issue a virtual card
-const card = await client.issueCard({
-  agent_id: agent.id,
-  currency: "EUR",
-  spend_limit_cents: 100000, // \u20ac1,000
-});
-console.log("Card issued:", card.last_four);
-
-// 3. Simulate a payment (sandbox only)
-const result = await client.sandboxSimulate({
-  card_id: card.id,
-  amount_cents: 4999,
-  currency: "EUR",
-  merchant_name: "Test Merchant",
-  mcc: "5999",
-});
-console.log("Decision:", result.decision);
-console.log("Rule traces:", result.rule_traces);`;
+function inferCategories(useCase: string): string[] {
+  const lc = useCase.toLowerCase()
+  if (lc.includes('saas') || lc.includes('software') || lc.includes('subscription')) {
+    return ['5734 — Computer Software Stores', '5817 — Digital Goods', '5818 — Digital Goods: Large Seller']
+  }
+  if (lc.includes('cloud') || lc.includes('infrastructure') || lc.includes('hosting')) {
+    return ['4816 — Computer Network Services', '7372 — Computer Programming', '5734 — Computer Software Stores']
+  }
+  if (lc.includes('office') || lc.includes('supplies')) {
+    return ['5111 — Stationery Stores', '5943 — Office Supplies', '5944 — Jewelry & Watch Shops']
+  }
+  if (lc.includes('travel') || lc.includes('trip')) {
+    return ['4511 — Airlines', '7011 — Hotels & Motels', '7512 — Car Rental']
+  }
+  return ['5411 — Grocery Stores', '5812 — Restaurants', '5999 — Miscellaneous Retail']
 }
 
-function generateCurlSnippet(vertical: string): string {
-  return `# 1. Create a ${vertical} agent
-curl -X POST https://sandbox.api.shatale.com/v1/agents \\
-  -H "Authorization: Bearer $SHATALE_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"name": "my-${vertical}-agent", "metadata": {"vertical": "${vertical}"}}'
+function handleGeneratePolicy(args: Record<string, unknown>) {
+  const useCase = String(args.use_case ?? 'general')
+  const budget = Number(args.monthly_budget ?? 1000)
+  const categories = (args.allowed_categories as string[] | undefined) ?? inferCategories(useCase)
 
-# 2. Issue a virtual card
-curl -X POST https://sandbox.api.shatale.com/v1/cards \\
-  -H "Authorization: Bearer $SHATALE_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"agent_id": "AGENT_ID", "currency": "EUR", "spend_limit_cents": 100000}'
+  return textResult(`# Spending Policy Template
 
-# 3. Simulate a payment (sandbox only)
-curl -X POST https://sandbox.api.shatale.com/v1/sandbox/simulate \\
-  -H "Authorization: Bearer $SHATALE_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"card_id": "CARD_ID", "amount_cents": 4999, "currency": "EUR", "merchant_name": "Test Merchant", "mcc": "5999"}'`;
+## Use case: ${useCase}
+
+\`\`\`json
+{
+  "name": "${useCase} policy",
+  "version": "1.0",
+  "limits": {
+    "monthly_budget": ${budget},
+    "currency": "USD",
+    "single_transaction_max": ${Math.round(budget * 0.25)},
+    "daily_transaction_count": 10,
+    "daily_amount_max": ${Math.round(budget * 0.5)}
+  },
+  "allowed_categories": ${JSON.stringify(categories, null, 4)},
+  "merchant_rules": {
+    "mode": "allowlist",
+    "merchants": []
+  },
+  "approval_rules": {
+    "auto_approve_below": ${Math.round(budget * 0.05)},
+    "require_human_approval_above": ${Math.round(budget * 0.5)},
+    "notify_on_every_purchase": true
+  },
+  "time_restrictions": {
+    "allowed_days": ["mon", "tue", "wed", "thu", "fri"],
+    "allowed_hours": { "start": "08:00", "end": "20:00", "timezone": "UTC" }
+  }
+}
+\`\`\`
+
+## Notes
+- Adjust \`single_transaction_max\` based on typical purchase sizes
+- Start with \`allowlist\` mode and add merchants as needed
+- Set \`auto_approve_below\` to a comfortable threshold for hands-off operation
+- Review and adjust after the first month of usage`)
 }
 
-// ─── Tool Registration ──────────────────────────────────────────────────────
-
-export function registerGuestTools(server: McpServer): void {
-  // ── shatale_list_mcc_codes ──────────────────────────────────────────────
-
-  server.tool(
-    "shatale_list_mcc_codes",
-    "List popular Merchant Category Codes (MCC) grouped by category. Useful for understanding which merchant types can be allowed or blocked by policy rules.",
-    {
-      category: z
-        .enum(["all", "shopping", "travel", "food", "services", "restricted"])
-        .default("all")
-        .describe("Filter by category, or 'all' to see every category"),
+export function createGuestTools(): ToolModule {
+  return {
+    tools: [
+      {
+        name: 'explain_shatale',
+        description:
+          'Explains what Shatale is and how AI agent payments work. No API key required.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'simulate_purchase_flow',
+        description:
+          'Simulates what would happen during a purchase flow — step by step. No API key required.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            merchant: {
+              type: 'string',
+              description: 'Merchant name or domain (e.g. "amazon.com")',
+            },
+            amount: {
+              type: 'number',
+              description: 'Purchase amount',
+            },
+            currency: {
+              type: 'string',
+              description: 'Currency code (e.g. "USD", "EUR")',
+            },
+            description: {
+              type: 'string',
+              description: 'What is being purchased',
+            },
+          },
+          required: ['merchant', 'amount', 'description'],
+        },
+      },
+      {
+        name: 'generate_policy_template',
+        description:
+          'Generates a spending policy template based on a use case. No API key required.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            use_case: {
+              type: 'string',
+              description:
+                'The use case for the policy (e.g. "SaaS subscriptions", "cloud infrastructure", "office supplies")',
+            },
+            monthly_budget: {
+              type: 'number',
+              description: 'Monthly budget limit in USD',
+            },
+            allowed_categories: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of allowed spending categories',
+            },
+          },
+          required: ['use_case'],
+        },
+      },
+    ],
+    handlers: {
+      explain_shatale: async () => handleExplainShatale(),
+      simulate_purchase_flow: async (args) => handleSimulatePurchase(args),
+      generate_policy_template: async (args) => handleGeneratePolicy(args),
     },
-    { readOnlyHint: true },
-    async ({ category }) => {
-      const filtered =
-        category === "all" ? MCC_CODES : MCC_CODES.filter((c) => c.category === category);
-
-      const grouped = new Map<string, MccCode[]>();
-      for (const code of filtered) {
-        const list = grouped.get(code.category) ?? [];
-        list.push(code);
-        grouped.set(code.category, list);
-      }
-
-      const lines: string[] = ["Merchant Category Codes (MCC)", ""];
-      for (const [cat, codes] of grouped) {
-        lines.push(`## ${cat.charAt(0).toUpperCase() + cat.slice(1)}`);
-        for (const c of codes) {
-          lines.push(`  ${c.code}  ${c.description}`);
-        }
-        lines.push("");
-      }
-
-      lines.push(`Total: ${filtered.length} codes`);
-
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
-  );
-
-  // ── shatale_demo_scenarios ──────────────────────────────────────────────
-
-  server.tool(
-    "shatale_demo_scenarios",
-    "Show 5 demo scenarios illustrating how the Shatale policy engine evaluates payment authorizations. No API key required.",
-    { readOnlyHint: true },
-    async () => {
-      const lines: string[] = [
-        "Shatale Policy Engine \u2014 Demo Scenarios",
-        "=======================================",
-        "",
-      ];
-
-      for (let i = 0; i < DEMO_SCENARIOS.length; i++) {
-        const s = DEMO_SCENARIOS[i];
-        const icon = s.decision === "APPROVED" ? "\u2705" : "\u274c";
-        lines.push(`${i + 1}. ${icon} ${s.decision}: ${s.title}`);
-        lines.push(`   ${formatCurrency(s.amount_cents, s.currency)} at ${s.merchant} (MCC ${s.mcc})`);
-        lines.push(`   Reason: ${s.reason}`);
-        lines.push(`   Rule traces:`);
-        lines.push(formatRuleTraces(s.rule_traces));
-        lines.push("");
-      }
-
-      lines.push(
-        "These scenarios demonstrate spend limits, MCC blocking, and balance checks.",
-        "Use shatale_simulate_payment with a sandbox API key to run real simulations."
-      );
-
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
-  );
-
-  // ── shatale_generate_snippet ────────────────────────────────────────────
-
-  server.tool(
-    "shatale_generate_snippet",
-    "Generate a code snippet showing how to integrate the Shatale API for a specific business vertical.",
-    {
-      language: z
-        .enum(["typescript", "curl"])
-        .describe("Programming language for the snippet"),
-      vertical: z
-        .enum(["shopping", "travel", "procurement", "expense"])
-        .default("shopping")
-        .describe("Business vertical for the example"),
-    },
-    { readOnlyHint: true },
-    async ({ language, vertical }) => {
-      const snippet =
-        language === "typescript"
-          ? generateTypescriptSnippet(vertical)
-          : generateCurlSnippet(vertical);
-
-      const header =
-        language === "typescript"
-          ? `TypeScript integration example (${vertical} vertical)`
-          : `cURL integration example (${vertical} vertical)`;
-
-      const text = [
-        header,
-        "=".repeat(header.length),
-        "",
-        snippet,
-        "",
-        "---",
-        "Docs: https://shatale.com/mcp",
-        "Dashboard: https://admin.shatale.com/dashboard",
-      ].join("\n");
-
-      return { content: [{ type: "text", text }] };
-    }
-  );
-
-  // ── shatale_get_started ─────────────────────────────────────────────────
-
-  server.tool(
-    "shatale_get_started",
-    "Get instructions for setting up Shatale and connecting this MCP server to your sandbox account.",
-    { readOnlyHint: true },
-    async () => {
-      const text = [
-        "Getting Started with Shatale MCP Server",
-        "========================================",
-        "",
-        "1. Sign up at https://admin.shatale.com/register?ref=mcp",
-        "   Create a free account to access the sandbox environment.",
-        "",
-        "2. Get your sandbox API key",
-        "   Go to https://admin.shatale.com/dashboard",
-        "   Create a new key \u2014 it will start with sh_test_ or sh_sandbox_.",
-        "",
-        "3. Set the SHATALE_API_KEY environment variable",
-        "   Add to your MCP server configuration:",
-        '   { "env": { "SHATALE_API_KEY": "sh_test_..." } }',
-        "",
-        "4. Restart the MCP server",
-        "   The sandbox tools will become available automatically.",
-        "",
-        "Useful links:",
-        "  Docs:      https://shatale.com/mcp",
-        "  API Ref:   https://shatale.com/mcp",
-        "  GitHub:    https://github.com/shatale/mcp-server",
-        "  Dashboard: https://admin.shatale.com/dashboard",
-        "",
-        "While you wait, try the guest tools:",
-        "  - shatale_demo_scenarios    \u2014 see how the policy engine works",
-        "  - shatale_list_mcc_codes    \u2014 browse merchant category codes",
-        "  - shatale_generate_snippet  \u2014 get integration code examples",
-      ].join("\n");
-
-      return { content: [{ type: "text", text }] };
-    }
-  );
+  }
 }

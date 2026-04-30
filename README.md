@@ -23,7 +23,36 @@ export SHATALE_API_KEY=sh_test_your_key_here
 npx shatale-mcp-server
 ```
 
-Now you have **9 tools** — create agents, simulate payments, test policies.
+Now you have **18 tools** — purchase, onboarding, credentials, and sandbox testing.
+
+## Tools (18 total)
+
+### Guest Mode (4 tools, no API key)
+- `explain_shatale` — Learn about the platform
+- `simulate_purchase_flow` — Walk through a purchase step-by-step
+- `generate_policy_template` — Create spending policy templates
+- `list_capabilities` — List available tools
+
+### Production Mode (8 tools, `sh_live_*` or `sh_test_*`)
+- `request_purchase` — Buy something for a user (supports `user_hint` for new users)
+- `register_user_profile` — Pre-register a user with claims
+- `preview_purchase` — Dry-run policy check
+- `get_purchase_status` — Poll for status and credentials
+- `cancel_purchase` — Cancel a pending purchase
+- `get_onboarding_status` — Check user registration progress
+- `request_temporary_credentials` — Get merchant login credentials
+- `get_credential_status` — Check credential status
+
+### Sandbox Mode (6 tools, `sh_test_*` only)
+- `sandbox_create_test_user` — Create test user
+- `sandbox_complete_onboarding` — Skip KYC for testing
+- `sandbox_approve_request` — Auto-approve requests
+- `sandbox_decline_request` — Decline requests
+- `sandbox_reset` — Clear sandbox data
+
+### Common (2 tools, always available)
+- `list_capabilities` — List tools for current mode
+- `list_mcc_codes` — Search merchant category codes
 
 ## Configure Your IDE
 
