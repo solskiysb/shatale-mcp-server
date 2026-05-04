@@ -1,7 +1,7 @@
 {
   "name": "@shatale/mcp-server",
-  "version": "0.2.0",
-  "description": "MCP server for AI agent payments via Shatale — 18 tools including Cold Start onboarding",
+  "version": "0.3.0",
+  "description": "MCP server for AI agent payments via Shatale — 20 tools including merchant catalog",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

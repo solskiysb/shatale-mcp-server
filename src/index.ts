@@ -10,6 +10,7 @@ import { createPurchaseTools } from './tools/purchase.js'
 import { createCredentialTools } from './tools/credentials.js'
 import { createSandboxTools } from './tools/sandbox.js'
 import { createOnboardingTools } from './tools/onboarding.js'
+import { createCatalogTools } from './tools/catalog.js'
 import { createCommonTools } from './tools/common.js'
 import type { ToolDefinition, ToolHandler } from './types.js'
 import { textResult } from './types.js'
@@ -30,9 +31,10 @@ function registerModule(mod: { tools: ToolDefinition[]; handlers: Record<string,
   Object.assign(allHandlers, mod.handlers)
 }
 
-// Always register guest + common tools
+// Always register guest + common + catalog tools
 registerModule(createGuestTools())
 registerModule(createCommonTools(client))
+registerModule(createCatalogTools(client))
 
 // Register authenticated tools if API key provided
 if (!isGuest) {
