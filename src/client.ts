@@ -1,271 +1,107 @@
-/**
- * Shatale API Client — trimmed for MCP server (sandbox-safe methods only).
- *
- * Changes from the full client:
- * - Uses crypto.randomUUID() instead of uuid package
- * - Adds X-Shatale-Client and X-Shatale-Client-Version headers
- * - Rejects sh_live_* keys in constructor
- * - Only sandbox-safe methods are exposed
- */
+import type { PurchaseInput, CredentialInput, SandboxUserInput } from './types.js'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface ShataleAgent {
-  id: string;
-  name: string;
-  status: "active" | "suspended" | "terminated";
-  publisher_id: string;
-  metadata?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ShataleCard {
-  id: string;
-  agent_id: string;
-  last_four: string;
-  status: "active" | "frozen" | "terminated";
-  currency: string;
-  spend_limit_cents: number;
-  balance_cents: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ShatalePolicy {
-  id: string;
-  agent_id: string;
-  name: string;
-  rules: PolicyRule[];
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PolicyRule {
-  type: string;
-  params: Record<string, unknown>;
-}
-
-export interface ShataleAuthorization {
-  id: string;
-  agent_id: string;
-  card_id: string;
-  amount_cents: number;
-  currency: string;
-  merchant_name: string;
-  mcc: string;
-  status: "approved" | "declined" | "reversed";
-  decision_reason?: string;
-  rule_traces?: RuleTrace[];
-  created_at: string;
-}
-
-export interface RuleTrace {
-  rule: string;
-  passed: boolean;
-  detail?: string;
-}
-
-export interface SimulatePolicyResult {
-  decision: "approved" | "declined";
-  rule_traces: RuleTrace[];
-  matched_policy_id?: string;
-}
-
-export interface SandboxSimulateResult {
-  authorization_id: string;
-  decision: "approved" | "declined";
-  amount_cents: number;
-  currency: string;
-  merchant_name: string;
-  mcc: string;
-  rule_traces: RuleTrace[];
-}
-
-export class ShataleApiError extends Error {
-  public readonly status: number;
-  public readonly code: string;
-  public readonly details?: Record<string, unknown>;
-
-  constructor(status: number, code: string, message: string, details?: Record<string, unknown>) {
-    super(message);
-    this.name = "ShataleApiError";
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
-
-// ─── Client ──────────────────────────────────────────────────────────────────
-
-const CLIENT_NAME = "mcp-server";
-const CLIENT_VERSION = "0.1.0";
+const CLIENT_VERSION = '0.1.0'
 
 export class ShataleClient {
-  private readonly baseUrl: string;
-  private readonly apiKey: string;
+  constructor(
+    private readonly baseURL: string,
+    private readonly apiKey: string,
+  ) {}
 
-  constructor(options: { apiKey: string; baseUrl?: string }) {
-    if (options.apiKey.startsWith("sh_live_")) {
-      throw new Error(
-        "Live API keys are not allowed in the MCP server. Use a sandbox key (sh_test_* or sh_sandbox_*)."
-      );
+  async request(method: string, path: string, body?: unknown): Promise<unknown> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Shatale-Client': 'mcp-server',
+      'X-Shatale-Client-Version': CLIENT_VERSION,
     }
 
-    this.apiKey = options.apiKey;
-    this.baseUrl = options.baseUrl ?? "https://sandbox.api.shatale.com/v1";
-  }
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
 
-  // ─── HTTP helpers ────────────────────────────────────────────────────────
-
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = {
-      "Authorization": `Bearer ${this.apiKey}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      "X-Idempotency-Key": crypto.randomUUID(),
-      "X-Shatale-Client": CLIENT_NAME,
-      "X-Shatale-Client-Version": CLIENT_VERSION,
-    };
-
-    const response = await fetch(url, {
+    const res = await fetch(`${this.baseURL}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
-    });
+    })
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new ShataleApiError(
-        response.status,
-        (errorBody as Record<string, string>).code ?? "unknown_error",
-        (errorBody as Record<string, string>).message ?? `HTTP ${response.status}`,
-        (errorBody as Record<string, unknown>).details as Record<string, unknown> | undefined
-      );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
+      throw new Error(err.error ?? `API error: ${res.status}`)
     }
 
-    return response.json() as Promise<T>;
+    return res.json()
   }
 
-  private get<T>(path: string): Promise<T> {
-    return this.request<T>("GET", path);
+  // ---- Purchase flow ----
+
+  async requestPurchase(input: PurchaseInput): Promise<unknown> {
+    return this.request('POST', '/v1/purchases', input)
   }
 
-  private post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("POST", path, body);
+  async previewPurchase(input: PurchaseInput): Promise<unknown> {
+    return this.request('POST', '/v1/purchases/preview', input)
   }
 
-  // ─── Agents ──────────────────────────────────────────────────────────────
-
-  async createAgent(params: {
-    name: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<ShataleAgent> {
-    return this.post<ShataleAgent>("/agents", params);
+  async getPurchaseStatus(id: string): Promise<unknown> {
+    return this.request('GET', `/v1/purchases/${encodeURIComponent(id)}`)
   }
 
-  async getAgent(agentId: string): Promise<ShataleAgent> {
-    return this.get<ShataleAgent>(`/agents/${agentId}`);
+  async cancelPurchase(id: string, reason?: string): Promise<unknown> {
+    return this.request('DELETE', `/v1/purchases/${encodeURIComponent(id)}`, { reason })
   }
 
-  async listAgents(params?: {
-    status?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ data: ShataleAgent[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.status) query.set("status", params.status);
-    if (params?.limit) query.set("limit", String(params.limit));
-    if (params?.offset) query.set("offset", String(params.offset));
-    const qs = query.toString();
-    return this.get(`/agents${qs ? `?${qs}` : ""}`);
+  // ---- Credentials ----
+
+  async requestCredentials(input: CredentialInput): Promise<unknown> {
+    return this.request('POST', '/v1/credentials', input)
   }
 
-  // ─── Cards ───────────────────────────────────────────────────────────────
-
-  async issueCard(params: {
-    agent_id: string;
-    currency?: string;
-    spend_limit_cents?: number;
-  }): Promise<ShataleCard> {
-    return this.post<ShataleCard>("/cards", params);
+  async getCredentialStatus(id: string): Promise<unknown> {
+    return this.request('GET', `/v1/credentials/${encodeURIComponent(id)}`)
   }
 
-  async getCard(cardId: string): Promise<ShataleCard> {
-    return this.get<ShataleCard>(`/cards/${cardId}`);
+  // ---- Onboarding / User Resolution ----
+
+  async registerUserProfile(input: {
+    publisher_user_id: string
+    user_claims: { email: string; name?: string; phone?: string; country?: string }
+    intended_use?: string
+    idempotency_key?: string
+  }): Promise<unknown> {
+    return this.request('POST', '/v1/onboarding/register', input)
   }
 
-  async freezeCard(cardId: string): Promise<ShataleCard> {
-    return this.post<ShataleCard>(`/cards/${cardId}/freeze`);
+  async getOnboardingStatus(sessionId: string): Promise<unknown> {
+    return this.request('GET', `/v1/onboarding/sessions/${encodeURIComponent(sessionId)}`)
   }
 
-  async unfreezeCard(cardId: string): Promise<ShataleCard> {
-    return this.post<ShataleCard>(`/cards/${cardId}/unfreeze`);
+  // ---- Common ----
+
+  async listMCCCodes(query?: string): Promise<unknown> {
+    const qs = query ? `?q=${encodeURIComponent(query)}` : ''
+    return this.request('GET', `/v1/mcc-codes${qs}`)
   }
 
-  // ─── Policies ────────────────────────────────────────────────────────────
+  // ---- Sandbox ----
 
-  async listPolicies(params?: {
-    agent_id?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ data: ShatalePolicy[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.agent_id) query.set("agent_id", params.agent_id);
-    if (params?.limit) query.set("limit", String(params.limit));
-    if (params?.offset) query.set("offset", String(params.offset));
-    const qs = query.toString();
-    return this.get(`/policies${qs ? `?${qs}` : ""}`);
+  async sandboxCreateTestUser(input?: SandboxUserInput): Promise<unknown> {
+    return this.request('POST', '/v1/sandbox/users', input ?? {})
   }
 
-  async getPolicy(policyId: string): Promise<ShatalePolicy> {
-    return this.get<ShatalePolicy>(`/policies/${policyId}`);
+  async sandboxCompleteOnboarding(userId: string): Promise<unknown> {
+    return this.request('POST', `/v1/sandbox/users/${encodeURIComponent(userId)}/onboarding`)
   }
 
-  async simulatePolicy(params: {
-    policy_id: string;
-    amount_cents: number;
-    currency: string;
-    mcc: string;
-    merchant_name?: string;
-  }): Promise<SimulatePolicyResult> {
-    return this.post<SimulatePolicyResult>("/policies/simulate", params);
+  async sandboxApproveRequest(requestId: string): Promise<unknown> {
+    return this.request('POST', `/v1/sandbox/requests/${encodeURIComponent(requestId)}/approve`)
   }
 
-  // ─── Authorizations ─────────────────────────────────────────────────────
-
-  async listAuthorizations(params?: {
-    agent_id?: string;
-    card_id?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ data: ShataleAuthorization[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.agent_id) query.set("agent_id", params.agent_id);
-    if (params?.card_id) query.set("card_id", params.card_id);
-    if (params?.status) query.set("status", params.status);
-    if (params?.limit) query.set("limit", String(params.limit));
-    if (params?.offset) query.set("offset", String(params.offset));
-    const qs = query.toString();
-    return this.get(`/authorizations${qs ? `?${qs}` : ""}`);
+  async sandboxDeclineRequest(requestId: string, reason?: string): Promise<unknown> {
+    return this.request('POST', `/v1/sandbox/requests/${encodeURIComponent(requestId)}/decline`, { reason })
   }
 
-  async getAuthorization(authorizationId: string): Promise<ShataleAuthorization> {
-    return this.get<ShataleAuthorization>(`/authorizations/${authorizationId}`);
-  }
-
-  // ─── Sandbox ─────────────────────────────────────────────────────────────
-
-  async sandboxSimulate(params: {
-    card_id: string;
-    amount_cents: number;
-    currency: string;
-    merchant_name: string;
-    mcc: string;
-  }): Promise<SandboxSimulateResult> {
-    return this.post<SandboxSimulateResult>("/sandbox/simulate", params);
+  async sandboxReset(): Promise<unknown> {
+    return this.request('POST', '/v1/sandbox/reset')
   }
 }
