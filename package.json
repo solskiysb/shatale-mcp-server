@@ -1,7 +1,7 @@
 {
   "name": "shatale-mcp-server",
   "version": "0.2.3",
-  "description": "MCP server for Shatale \u2014 AI agent payment infrastructure with 20+ tools for purchases, virtual cards, merchant catalog, and policy engine",
+  "description": "MCP server for Shatale — AI agent payment infrastructure with 20+ tools for purchases, virtual cards, merchant catalog, and policy engine",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "test": "vitest run",
+    "test:public": "vitest run tests/e2e/guest-mode.test.ts tests/e2e/security.test.ts tests/e2e/contract.test.ts tests/e2e/happy-path-all-tools.test.ts",
+    "test:watch": "vitest"
   },
   "keywords": [
     "mcp",
@@ -38,7 +41,8 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^4.1.5"
   }
 }

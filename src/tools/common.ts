@@ -5,7 +5,7 @@ import { jsonResult, textResult } from '../types.js'
 export function createCommonTools(client: ShataleClient): ToolModule {
   const apiKey = process.env.SHATALE_API_KEY ?? ''
   const isGuest = !apiKey
-  const isSandbox = apiKey.startsWith('sh_test_')
+  const isSandbox = apiKey.startsWith('sh_test_') || apiKey.startsWith('sk_test_') || apiKey.startsWith('sk_sandbox_')
   const mode = isGuest ? 'guest' : isSandbox ? 'sandbox' : 'production'
 
   return {

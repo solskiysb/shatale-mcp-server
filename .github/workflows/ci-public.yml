@@ -1,0 +1,34 @@
+name: "CI: Public (guest/validation/security)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  public-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc
+
+      - name: Run public tests (no API key)
+        run: npm run test:public
+        env:
+          SHATALE_API_KEY: ""
+          CI: "true"
+
+      - name: Upload server logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server-logs-public
+          path: /tmp/mcp-test-*.log
+          retention-days: 7
+          if-no-files-found: ignore

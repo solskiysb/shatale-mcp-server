@@ -37,7 +37,7 @@ if (!ALLOWED_HOSTS.some(h => apiBaseUrl.hostname === h || apiBaseUrl.hostname.en
 const apiBase = apiBaseUrl.toString().replace(/\/$/, '')
 
 const isGuest = !apiKey
-const isSandbox = apiKey.startsWith('sk_test_') || apiKey.startsWith('sh_test_')
+const isSandbox = apiKey.startsWith('sk_test_') || apiKey.startsWith('sh_test_') || apiKey.startsWith('sk_sandbox_')
 
 const client = new ShataleClient(apiBase, apiKey)
 
