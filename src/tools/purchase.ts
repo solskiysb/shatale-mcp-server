@@ -1,6 +1,24 @@
+import { z } from 'zod'
 import type { ShataleClient } from '../client.js'
 import type { ToolModule } from '../types.js'
 import { jsonResult, textResult } from '../types.js'
+
+// F-003: Zod input validation schemas
+const requestPurchaseSchema = z.object({
+  publisher_user_id: z.string().min(1, 'publisher_user_id is required'),
+  agent_id: z.string().min(1, 'agent_id is required'),
+  merchant_ref: z.string().min(1, 'merchant_ref is required'),
+  amount_cents: z.number().int('amount_cents must be an integer').positive('amount_cents must be positive').max(10_000_000, 'amount_cents exceeds maximum (10,000,000)'),
+  currency: z.string().length(3, 'currency must be a 3-letter ISO code').default('EUR'),
+  description: z.string().min(1, 'description is required'),
+  user_hint: z.object({
+    email: z.string().email().optional(),
+    name: z.string().optional(),
+    phone: z.string().optional(),
+    country: z.string().length(2).optional(),
+  }).optional(),
+  idempotency_key: z.string().optional(),
+})
 
 export function createPurchaseTools(client: ShataleClient): ToolModule {
   return {
@@ -124,41 +142,37 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
     ],
     handlers: {
       request_purchase: async (args) => {
+        // F-003: Validate input with zod
+        const parsed = requestPurchaseSchema.safeParse(args)
+        if (!parsed.success) {
+          return textResult(`Invalid input: ${parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')}`, true)
+        }
         try {
-          const idempotencyKey = args.idempotency_key
-            ? String(args.idempotency_key)
-            : `sha-${Date.now()}-${Math.random().toString(36).slice(2)}`
+          const input = parsed.data
+          const idempotencyKey = input.idempotency_key
+            ?? `sha-${Date.now()}-${Math.random().toString(36).slice(2)}`
           const result = await client.requestPurchase({
-            publisher_user_id: String(args.publisher_user_id),
-            agent_id: String(args.agent_id),
-            merchant_ref: String(args.merchant_ref),
-            amount_cents: Number(args.amount_cents),
-            currency: String(args.currency),
-            description: String(args.description),
-            user_hint: args.user_hint as any,
+            publisher_user_id: input.publisher_user_id,
+            agent_id: input.agent_id,
+            merchant_ref: input.merchant_ref,
+            amount_cents: input.amount_cents,
+            currency: input.currency,
+            description: input.description,
+            user_hint: input.user_hint,
             idempotency_key: idempotencyKey,
           })
           return jsonResult(result)
         } catch (err) {
-          return textResult(`Purchase API error: ${err instanceof Error ? err.message : String(err)}`, true)
+          return textResult(`Purchase request failed: ${err instanceof Error ? err.message : 'unexpected error'}`, true)
         }
       },
 
-      preview_purchase: async (args) => {
-        try {
-          const result = await client.previewPurchase({
-            publisher_user_id: String(args.publisher_user_id),
-            agent_id: String(args.agent_id),
-            merchant_ref: String(args.merchant_ref),
-            amount_cents: Number(args.amount_cents),
-            currency: String(args.currency),
-            description: String(args.description),
-            idempotency_key: `sha-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          })
-          return jsonResult(result)
-        } catch (err) {
-          return textResult(`Purchase API error: ${err instanceof Error ? err.message : String(err)}`, true)
-        }
+      preview_purchase: async (_args) => {
+        // F-013: Preview endpoint returns 405 — mark as coming soon
+        return textResult(
+          'Purchase preview is not yet available via the API. Use request_purchase to create a purchase, ' +
+          'or use simulate_purchase_flow (no API key required) to walk through the flow step by step.',
+        )
       },
 
       get_purchase_status: async (args) => {

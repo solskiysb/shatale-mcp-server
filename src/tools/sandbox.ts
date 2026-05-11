@@ -1,6 +1,13 @@
+import { z } from 'zod'
 import type { ShataleClient } from '../client.js'
 import type { ToolModule } from '../types.js'
 import { jsonResult, textResult } from '../types.js'
+
+// F-003: Zod input validation schemas
+const createTestUserSchema = z.object({
+  email: z.string().email('must be a valid email').optional(),
+  name: z.string().min(1).max(200).optional(),
+})
 
 export function createSandboxTools(client: ShataleClient): ToolModule {
   return {
@@ -82,14 +89,16 @@ export function createSandboxTools(client: ShataleClient): ToolModule {
     ],
     handlers: {
       sandbox_create_test_user: async (args) => {
+        // F-003: Validate input with zod
+        const parsed = createTestUserSchema.safeParse(args)
+        if (!parsed.success) {
+          return textResult(`Invalid input: ${parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')}`, true)
+        }
         try {
-          const result = await client.sandboxCreateTestUser({
-            email: args.email ? String(args.email) : undefined,
-            name: args.name ? String(args.name) : undefined,
-          })
+          const result = await client.sandboxCreateTestUser(parsed.data)
           return jsonResult(result)
         } catch (err) {
-          return textResult(`Sandbox API error: ${err instanceof Error ? err.message : String(err)}`, true)
+          return textResult(`Sandbox request failed: ${err instanceof Error ? err.message : 'unexpected error'}`, true)
         }
       },
 

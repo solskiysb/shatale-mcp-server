@@ -31,8 +31,18 @@ export class ShataleClient {
       })
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
-        throw new Error(err.error ?? `API error: ${res.status}`)
+        // F-006: Don't leak raw backend error messages to the LLM
+        const statusCode = res.status
+        if (statusCode === 401 || statusCode === 403) {
+          throw new Error('Authentication failed. Check your API key and try again.')
+        }
+        if (statusCode === 404) {
+          throw new Error(`Resource not found (${method} ${path}).`)
+        }
+        if (statusCode === 429) {
+          throw new Error('Rate limit exceeded. Please wait and try again.')
+        }
+        throw new Error(`API request failed (HTTP ${statusCode}). Check your API key and parameters.`)
       }
 
       return res.json()
@@ -88,7 +98,53 @@ export class ShataleClient {
 
   async listMCCCodes(query?: string): Promise<unknown> {
     const qs = query ? `?q=${encodeURIComponent(query)}` : ''
-    return this.request('GET', `/v1/mcc-codes${qs}`)
+    try {
+      return await this.request('GET', `/v1/mcc-codes${qs}`)
+    } catch {
+      // F-008/F-011: Fallback to built-in MCC list when API returns error
+      return ShataleClient.filterBuiltInMCC(query)
+    }
+  }
+
+  /** Built-in MCC code list used as fallback when API is unavailable */
+  private static readonly BUILT_IN_MCC: Array<{ code: number; description: string; category: string }> = [
+    { code: 4511, description: 'Airlines, Air Carriers', category: 'travel' },
+    { code: 4722, description: 'Travel Agencies and Tour Operators', category: 'travel' },
+    { code: 4816, description: 'Computer Network/Information Services', category: 'technology' },
+    { code: 5111, description: 'Stationery, Office Supplies', category: 'office' },
+    { code: 5311, description: 'Department Stores', category: 'retail' },
+    { code: 5411, description: 'Grocery Stores, Supermarkets', category: 'food' },
+    { code: 5541, description: 'Service Stations (Fuel)', category: 'auto' },
+    { code: 5699, description: 'Miscellaneous Apparel and Accessory Shops', category: 'retail' },
+    { code: 5732, description: 'Electronics Stores', category: 'retail' },
+    { code: 5734, description: 'Computer Software Stores', category: 'technology' },
+    { code: 5812, description: 'Eating Places, Restaurants', category: 'food' },
+    { code: 5814, description: 'Fast Food Restaurants', category: 'food' },
+    { code: 5816, description: 'Digital Goods: Games', category: 'digital' },
+    { code: 5817, description: 'Digital Goods: Applications', category: 'digital' },
+    { code: 5818, description: 'Digital Goods: Large Digital Goods Merchant', category: 'digital' },
+    { code: 5921, description: 'Package Stores, Beer, Wine, Liquor', category: 'restricted' },
+    { code: 5943, description: 'Stationery Stores, Office and School Supply', category: 'office' },
+    { code: 5993, description: 'Cigar Stores and Stands', category: 'restricted' },
+    { code: 5999, description: 'Miscellaneous and Specialty Retail Stores', category: 'retail' },
+    { code: 6011, description: 'Financial Institutions: Automated Cash Disbursements', category: 'financial' },
+    { code: 6051, description: 'Non-Financial Institutions: Foreign Currency, Money Orders', category: 'financial' },
+    { code: 7011, description: 'Hotels, Motels, Resorts', category: 'travel' },
+    { code: 7273, description: 'Dating and Escort Services', category: 'restricted' },
+    { code: 7372, description: 'Computer Programming, Data Processing', category: 'technology' },
+    { code: 7512, description: 'Automobile Rental Agency', category: 'travel' },
+    { code: 7941, description: 'Commercial Sports, Athletic Fields', category: 'entertainment' },
+    { code: 7995, description: 'Gambling — Betting/Casino/Lottery', category: 'restricted' },
+  ]
+
+  private static filterBuiltInMCC(query?: string) {
+    const list = ShataleClient.BUILT_IN_MCC
+    if (!query) return { codes: list, source: 'built-in' }
+    const q = query.toLowerCase()
+    const filtered = list.filter(
+      m => m.description.toLowerCase().includes(q) || m.category.includes(q) || String(m.code).includes(q),
+    )
+    return { codes: filtered, source: 'built-in' }
   }
 
   // ---- Sandbox ----

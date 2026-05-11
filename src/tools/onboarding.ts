@@ -1,6 +1,20 @@
+import { z } from 'zod'
 import type { ShataleClient } from '../client.js'
 import type { ToolModule } from '../types.js'
 import { jsonResult, textResult } from '../types.js'
+
+// F-003: Zod input validation schemas
+const registerUserProfileSchema = z.object({
+  publisher_user_id: z.string().min(1, 'publisher_user_id is required'),
+  user_claims: z.object({
+    email: z.string().email('valid email is required'),
+    name: z.string().optional(),
+    phone: z.string().optional(),
+    country: z.string().length(2, 'country must be a 2-letter ISO code').optional(),
+  }),
+  intended_use: z.enum(['purchase', 'credentials', 'general']).optional().default('general'),
+  idempotency_key: z.string().optional(),
+})
 
 export function createOnboardingTools(client: ShataleClient): ToolModule {
   return {
@@ -61,16 +75,22 @@ export function createOnboardingTools(client: ShataleClient): ToolModule {
     ],
     handlers: {
       register_user_profile: async (args) => {
+        // F-003: Validate input with zod
+        const parsed = registerUserProfileSchema.safeParse(args)
+        if (!parsed.success) {
+          return textResult(`Invalid input: ${parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')}`, true)
+        }
         try {
+          const input = parsed.data
           const result = await client.registerUserProfile({
-            publisher_user_id: String(args.publisher_user_id),
-            user_claims: args.user_claims as any,
-            intended_use: args.intended_use ? String(args.intended_use) : 'general',
-            idempotency_key: args.idempotency_key ? String(args.idempotency_key) : undefined,
+            publisher_user_id: input.publisher_user_id,
+            user_claims: input.user_claims,
+            intended_use: input.intended_use,
+            idempotency_key: input.idempotency_key,
           })
           return jsonResult(result)
         } catch (err) {
-          return textResult(`Onboarding API error: ${err instanceof Error ? err.message : String(err)}`, true)
+          return textResult(`Registration failed: ${err instanceof Error ? err.message : 'unexpected error'}`, true)
         }
       },
 
