@@ -20,13 +20,13 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
               type: 'string',
               description: 'Identifier for the AI agent making the request',
             },
-            merchant: {
+            merchant_ref: {
               type: 'string',
-              description: 'Merchant name or domain (e.g. "amazon.com")',
+              description: 'Merchant reference — name or domain (e.g. "amazon.com")',
             },
-            amount: {
+            amount_cents: {
               type: 'number',
-              description: 'Purchase amount in the specified currency',
+              description: 'Purchase amount in cents (e.g. 4999 for $49.99)',
             },
             currency: {
               type: 'string',
@@ -48,10 +48,10 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
             },
             idempotency_key: {
               type: 'string',
-              description: 'Unique key for idempotent requests (prevents duplicate purchases)',
+              description: 'Unique key for idempotent requests (prevents duplicate purchases). Auto-generated if omitted.',
             },
           },
-          required: ['publisher_user_id', 'agent_id', 'merchant', 'amount', 'currency', 'description'],
+          required: ['publisher_user_id', 'agent_id', 'merchant_ref', 'amount_cents', 'currency', 'description'],
         },
       },
       {
@@ -69,13 +69,13 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
               type: 'string',
               description: 'Identifier for the AI agent',
             },
-            merchant: {
+            merchant_ref: {
               type: 'string',
-              description: 'Merchant name or domain',
+              description: 'Merchant reference — name or domain',
             },
-            amount: {
+            amount_cents: {
               type: 'number',
-              description: 'Purchase amount',
+              description: 'Purchase amount in cents',
             },
             currency: {
               type: 'string',
@@ -86,7 +86,7 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
               description: 'Description of the purchase',
             },
           },
-          required: ['publisher_user_id', 'agent_id', 'merchant', 'amount', 'currency', 'description'],
+          required: ['publisher_user_id', 'agent_id', 'merchant_ref', 'amount_cents', 'currency', 'description'],
         },
       },
       {
@@ -125,15 +125,18 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
     handlers: {
       request_purchase: async (args) => {
         try {
+          const idempotencyKey = args.idempotency_key
+            ? String(args.idempotency_key)
+            : `sha-${Date.now()}-${Math.random().toString(36).slice(2)}`
           const result = await client.requestPurchase({
             publisher_user_id: String(args.publisher_user_id),
             agent_id: String(args.agent_id),
-            merchant: String(args.merchant),
-            amount: Number(args.amount),
+            merchant_ref: String(args.merchant_ref),
+            amount_cents: Number(args.amount_cents),
             currency: String(args.currency),
             description: String(args.description),
             user_hint: args.user_hint as any,
-            idempotency_key: args.idempotency_key ? String(args.idempotency_key) : undefined,
+            idempotency_key: idempotencyKey,
           })
           return jsonResult(result)
         } catch (err) {
@@ -146,10 +149,11 @@ export function createPurchaseTools(client: ShataleClient): ToolModule {
           const result = await client.previewPurchase({
             publisher_user_id: String(args.publisher_user_id),
             agent_id: String(args.agent_id),
-            merchant: String(args.merchant),
-            amount: Number(args.amount),
+            merchant_ref: String(args.merchant_ref),
+            amount_cents: Number(args.amount_cents),
             currency: String(args.currency),
             description: String(args.description),
+            idempotency_key: `sha-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           })
           return jsonResult(result)
         } catch (err) {

@@ -19,18 +19,26 @@ export class ShataleClient {
       headers['Authorization'] = `Bearer ${this.apiKey}`
     }
 
-    const res = await fetch(`${this.baseURL}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
-      throw new Error(err.error ?? `API error: ${res.status}`)
+    try {
+      const res = await fetch(`${this.baseURL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
+        throw new Error(err.error ?? `API error: ${res.status}`)
+      }
+
+      return res.json()
+    } finally {
+      clearTimeout(timeout)
     }
-
-    return res.json()
   }
 
   // ---- Purchase flow ----

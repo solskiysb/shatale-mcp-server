@@ -16,6 +16,10 @@ export function createCredentialTools(client: ShataleClient): ToolModule {
               type: 'string',
               description: 'The publisher-side user ID',
             },
+            agent_id: {
+              type: 'string',
+              description: 'Identifier for the AI agent making the request',
+            },
             merchant_domain: {
               type: 'string',
               description: 'The merchant domain these credentials will be used for (e.g. "aws.amazon.com")',
@@ -25,7 +29,7 @@ export function createCredentialTools(client: ShataleClient): ToolModule {
               description: 'Why temporary credentials are needed (e.g. "Add payment method for AWS account")',
             },
           },
-          required: ['publisher_user_id', 'merchant_domain', 'purpose'],
+          required: ['publisher_user_id', 'agent_id', 'merchant_domain', 'purpose'],
         },
       },
       {
@@ -48,6 +52,7 @@ export function createCredentialTools(client: ShataleClient): ToolModule {
         try {
           const result = await client.requestCredentials({
             publisher_user_id: String(args.publisher_user_id),
+            agent_id: String(args.agent_id),
             merchant_domain: String(args.merchant_domain),
             purpose: String(args.purpose),
           })

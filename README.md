@@ -136,13 +136,13 @@ Try these with your AI assistant:
 ## How It Works
 
 ```
-AI Agent → MCP Server → Shatale API → ARQEN (BIN Sponsor) → Visa/Mastercard
+AI Agent → MCP Server → Shatale API → Card Issuer → Visa/Mastercard
 ```
 
 1. **Agent requests purchase** via `request_purchase` with merchant and amount
 2. **Shatale evaluates policy** — checks delegation scope, amount limits, MCC rules
 3. **User verifies** (if new) — opens personalized onboarding URL, confirms identity
-4. **Virtual card issued** — ARQEN issues a Visa card locked to the merchant and amount
+4. **Virtual card issued** — issuing partner provisions a Visa card locked to the merchant and amount
 5. **Agent receives credentials** — PAN, CVV, expiry via `request_temporary_credentials`
 6. **Agent completes purchase** — uses card at the merchant
 
@@ -156,7 +156,7 @@ Built-in documentation available as MCP resources:
 
 ## Security
 
-- Only sandbox keys (`sh_test_*`) are accepted — production keys are rejected
+- Only sandbox keys (`sk_test_*` / `sh_test_*`) are accepted — production keys are rejected
 - Card credentials are encrypted (JWE) and delivered only to authorized agents
 - Local stdio transport — no network server exposed
 - See [SECURITY.md](SECURITY.md) for vulnerability reporting

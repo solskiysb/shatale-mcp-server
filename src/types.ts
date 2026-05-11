@@ -2,8 +2,8 @@
 export interface PurchaseInput {
   publisher_user_id: string
   agent_id: string
-  merchant: string
-  amount: number
+  merchant_ref: string
+  amount_cents: number
   currency: string
   description: string
   user_hint?: {
@@ -12,12 +12,13 @@ export interface PurchaseInput {
     phone?: string
     country?: string
   }
-  idempotency_key?: string
+  idempotency_key: string
 }
 
 /** Credential request input */
 export interface CredentialInput {
   publisher_user_id: string
+  agent_id: string
   merchant_domain: string
   purpose: string
 }

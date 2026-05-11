@@ -16,9 +16,24 @@ import type { ToolDefinition, ToolHandler } from './types.js'
 import { textResult } from './types.js'
 
 const apiKey = process.env.SHATALE_API_KEY ?? ''
-const apiBase = process.env.SHATALE_API_URL ?? 'https://api.shatale.com'
+
+// F-001/F-010: Reject production keys
+if (apiKey.startsWith('sh_live_') || apiKey.startsWith('sk_live_')) {
+  console.error('ERROR: Production keys are not allowed. Use a sandbox key (sk_test_*).')
+  process.exit(1)
+}
+
+// F-005: Whitelist API URL
+const ALLOWED_HOSTS = ['api.shatale.com', 'localhost', '127.0.0.1', 'api-production-bad6.up.railway.app']
+const apiBaseUrl = new URL(process.env.SHATALE_API_URL ?? 'https://api.shatale.com')
+if (!ALLOWED_HOSTS.some(h => apiBaseUrl.hostname === h || apiBaseUrl.hostname.endsWith('.shatale.com'))) {
+  console.error(`ERROR: Untrusted API URL: ${apiBaseUrl.hostname}. Only *.shatale.com and localhost are allowed.`)
+  process.exit(1)
+}
+const apiBase = apiBaseUrl.toString().replace(/\/$/, '')
+
 const isGuest = !apiKey
-const isSandbox = apiKey.startsWith('sh_test_')
+const isSandbox = apiKey.startsWith('sk_test_') || apiKey.startsWith('sh_test_')
 
 const client = new ShataleClient(apiBase, apiKey)
 
@@ -67,6 +82,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   return handler(args ?? {})
+})
+
+// F-009: Process-level error handling for JSON-RPC edge cases
+process.on('uncaughtException', (err) => {
+  console.error('MCP server error:', err.message)
+  process.exit(1)
 })
 
 // Start server
